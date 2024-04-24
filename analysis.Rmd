@@ -131,7 +131,7 @@ Hover on dots to see what individual questions are and click/double click on the
 
 # UCL versus competitors
 
-Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have  Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, Oxford, St Andrews, Cambridge and Exeter. We can ID these in the data by UKPRN numbers, and just plot 
+Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have  Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, Oxford, St Andrews, Cambridge and Exeter. We can ID these in the data by UKPRN numbers, and just plot over all the questions:
 
 ```{r}
 d[,ucl_comp:=ifelse(UKPRN %in% c(10005553, 10007167, 10007774, 10007775, 10007788, 
@@ -139,4 +139,13 @@ d[,ucl_comp:=ifelse(UKPRN %in% c(10005553, 10007167, 10007774, 10007775, 1000778
 pirateye( d[ucl_comp & tm],x_condition = "year",colour_condition =  "ucl_all",dodgewidth = 0,
          line = T,dv="rzall",violin = F,error_bars = F,dots=F)+yp+geom_hline(aes(yintercept=0))
 ```
+
+So we were behind the pack a bit 10 years ago, then had a bit of growth from 2017 onwards. After the pandemic, like competitors, we have dipped (but again - a different survey is being used).
+
+Now let's look at each of the themes in turn, and plot us vs all the competitors.
+
+```{r}
+
+```
+
 
