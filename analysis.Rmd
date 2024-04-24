@@ -8,7 +8,7 @@ knit: (function(input_file, encoding) {
 output: html_document
 ---
 
-This is a notebook to analyse NNS data from 2014-2023, baswed on data from NSS wesbite. 
+This is a notebook to analyse NNS data from 2014-2023, based on data from NSS wesbite. 
 
 If you don't have eyethinkdata tools, install from github
 
@@ -96,8 +96,13 @@ pirateye( d[ucl & tm],x_condition = "year",colour_condition =  "theme",dodgewidt
 
 So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down
 
+Let's try an interactive plot of the same info:
 
-
-
+```{r}
+library(plotly)
+p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,colour=theme))+ 
+  geom_line(data=d[Institution=="University College London" & tm,.(rzall=mean(rzall)),by=.(year,theme)])+ geom_point()
+ggplotly(p)
+```
 
 
