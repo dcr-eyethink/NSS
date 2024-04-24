@@ -10,6 +10,8 @@ output: html_document
 
 This is a notebook to analyse NNS data from 2014-2023, based on data from NSS wesbite. 
 
+# Preprocessing
+
 If you don't have eyethinkdata tools, install from github
 
 ```{r, eval=FALSE}
@@ -20,6 +22,7 @@ Load in the package and the raw data. Note that this has been filtered to just p
 
 ```{r}
 library(eyethinkdata)
+library(plotly)
 full_data <- fread("NSS_2014-23.csv")
 qkey <-  data.table(read.csv("qkey3.csv"))
 ```
@@ -63,19 +66,24 @@ ggplot(d,aes(x=r,colour=year,group=year))+geom_density()
 
 So it broadly looks as though agreement in these statement overall peaks around the positive, "agree" response, but that over the years, responses have been slipping down for everyone.
 
-Now let's plot UCL's last 10 years for each theme There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years.
+# UCL results across the years
+
+Now let's plot UCL's last 10 years for each theme There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years. This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions
 
 ```{r}
 d[,tm:=ifelse(theme %in% c("mental_health", "personal", "freedom","overall"),FALSE,TRUE)]
-# this is a plot element with the new questionnaires marked. We can reuse it
-yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,linewidth=3,aes(xintercept=year))
-pirateye(d[Institution=="University College London" & tm],x_condition = "year",
-         colour_condition = "theme",line = T,dv="r",violin = F,error_bars = F)+yp
- 
-
+yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))
+p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=r,colour=theme,text=paste(theme,q)))+yp+
+  geom_line(data=d[Institution=="University College London" & tm,.(r=mean(r)),by=.(year,theme)],
+            aes(x=year,colour=theme,y=r),inherit.aes = F,size=1.5,alpha=.4)+
+  geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()
+ggplotly(p,tooltip = "text")
 ```
 
+
 So people love our resources! The rankings seem pretty stable over time here. Rankings seem higher pre 2017 and there is a drop off in 2023, but as the grey lines show, these changes are confounded by a different set of questions (and responses). What does seem clear here is that our weak point is our assessments. These are ranked low and if anything have been getting worse.
+
+# UCL vs all other psych depts
 
 How do we match up with the average psych dept? Here's all rankings over the years, comparing UCL against all other psych depts.
 
@@ -96,13 +104,13 @@ pirateye( d[ucl & tm],x_condition = "year",colour_condition =  "theme",dodgewidt
 
 So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down
 
-Let's try an interactive plot of the same info:
+Let's try an interactive plot of the same info - hoover on dots to see what individual questions are.
 
 ```{r}
-library(plotly)
-p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,colour=theme))+ 
-  geom_line(data=d[Institution=="University College London" & tm,.(rzall=mean(rzall)),by=.(year,theme)])+ geom_point()
-ggplotly(p)
+p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,colour=theme,text=q))+
+  yp+geom_hline(aes(yintercept=0))+
+  geom_line(data=d[Institution=="University College London" & tm,.(rzall=mean(rzall)),by=.(year,theme)],aes(x=year,colour=theme,y=rzall),inherit.aes = F,size=1.5,alpha=.4)+
+  geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()
+ggplotly(p,tooltip = "text")
 ```
-
 
