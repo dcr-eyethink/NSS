@@ -1,5 +1,5 @@
 ---
-title: "NSS results"
+title: "UCL Psychology NSS results"
 knit: (function(input_file, encoding) {
     out_dir <- 'docs';
     rmarkdown::render(input_file,
@@ -8,9 +8,19 @@ knit: (function(input_file, encoding) {
 output: html_document
 ---
 
-This is a notebook to analyse NNS data from 2014-2023, based on data from NSS wesbite. 
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  out.width = "90%",
+  fig.width = 6, 
+  fig.height = 4,
+  comment = "#>"
+)
+```
 
-# Preprocessing
+This is a page analysing NSS data from 2014-2023, based on open source data from NSS wesbite. The code, data and markdown doc that generated this page are all on a github open repository <https://github.com/dcr-eyethink/NSS>. You can look over the processing that I did on data below, or you can skip to the plotting of [UCL results across the years] or [UCL vs all other psych depts], or [UCL versus competitors].
+
+## Preprocessing
 
 If you don't have eyethinkdata tools, install from github
 
@@ -18,7 +28,7 @@ If you don't have eyethinkdata tools, install from github
 devtools::install_github("dcr-eyethink/eyethinkdata")
 ```
 
-Load in the package and the raw data. Note that this has been filtered to just psychology courses, and students on first degree only. 
+Load in the package and the raw data. Note that this has been filtered to just psychology courses, and students on first degree only.
 
 ```{r}
 library(eyethinkdata)
@@ -26,6 +36,7 @@ library(plotly)
 full_data <- fread("NSS_2014-23.csv")
 qkey <-  data.table(read.csv("qkey3.csv"))
 ```
+
 First we need to translate the question numbers into the items and labels. There are 3 slightly difference question sets. Annoying. So we have to merge info from the question keys to three different sections. For each, we will have columns for the theme, the full question, and a one word question key q.
 
 ```{r}
@@ -34,9 +45,10 @@ d <- rbind( pid_merge(full_data[year<=2016], qkey[,.(QuestionNumber=qnum,theme=t
  pid_merge(full_data[year==2023], qkey[,.(QuestionNumber=qnum,theme=theme2023,q=item2023, question=set_full2023)],link="QuestionNumber"))
 
 ```
+
 Now we want one number that summarises responses to the question. Right now we have the distribution of responses for each. All the items are framed positively, ie if they agree with the statement the student is saying something good about the university. So we're going to code into a response variable between -1 and 1 that is positive if they are agreeing, and negative if they are disagreeing. This is different to how the NSS processes this. They have a positivity score, which I assume just calculates the % of responses that are agreeing in anyway. That seems to ignore some of the graded information we have in this dataset tbough.
 
-For pre 2023, each question has 5 columns giving % responses for the 5 options from strongly agree to strongly disagree.  Convert these first to numbers, and then sum to a -1 to 1 scale in a variable r. 
+For pre 2023, each question has 5 columns giving % responses for the 5 options from strongly agree to strongly disagree. Convert these first to numbers, and then sum to a -1 to 1 scale in a variable r.
 
 ```{r}
 d[year<2023,ans_sd:=ifelse(A1=="",0,as.numeric(gsub(A1,replacement = "",pattern="%")))]
@@ -47,7 +59,7 @@ d[year<2023,ans_sa:=ifelse(A5=="",0,as.numeric(gsub(A5,replacement = "",pattern=
 d[year<2023,r:= (ans_sa + ans_a*.5  + ans_d *-.5 + ans_sd*-1)/100]
 ```
 
-For 2023 onwards, We have total number of responses for 4 options from strongly agree to strongly disagree, ie there is no 'neither agree nor disagree' option. Convert these to a -1 to 1 scale as above. 
+For 2023 onwards, We have total number of responses for 4 options from strongly agree to strongly disagree, ie there is no 'neither agree nor disagree' option. Convert these to a -1 to 1 scale as above.
 
 ```{r}
 d[year>=2023,ans_sa:=ifelse(A1=="",0,as.numeric(A1))]
@@ -57,7 +69,7 @@ d[year>=2023,ans_sd:=ifelse(A4=="",0,as.numeric(A4))]
 d[year>=2023,r:= (ans_sa + ans_a*.5  + ans_d *-.5 + ans_sd*-1)/(ans_sa+ans_a+ans_d+ans_sd)]
 ```
 
-I'm going to exclude the questions that aren't in the main list, and that are about the student union. Then let's check the distribution of those values over all questions for each year. 
+I'm going to exclude the questions that aren't in the main list, and that are about the student union. Then let's check the distribution of those values over all questions for each year.
 
 ```{r}
 d <- d[!theme=="union" & !is.na(theme)]
@@ -68,9 +80,9 @@ So it broadly looks as though agreement in these statement overall peaks around 
 
 # UCL results across the years
 
-Now let's plot UCL's last 10 years for each theme There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years. This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions
+Now let's plot UCL's last 10 years for each theme. There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years. 
 
-```{r}
+```{r warning=FALSE}
 d[,tm:=ifelse(theme %in% c("mental_health", "personal", "freedom","overall"),FALSE,TRUE)]
 yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))
 p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=r,colour=theme,text=paste(theme,q)))+yp+
@@ -80,6 +92,9 @@ p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=r,colo
 ggplotly(p,tooltip = "text")
 ```
 
+This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions. Click/double click on the themes in the legend to hide or isolate them. 
+
+If you want to see the full text of the questions, you can [look at the full question key](https://github.com/dcr-eyethink/NSS/blob/main/qkey3.csv)
 
 So people love our resources! The rankings seem pretty stable over time here. Rankings seem higher pre 2017 and there is a drop off in 2023, but as the grey lines show, these changes are confounded by a different set of questions (and responses). What does seem clear here is that our weak point is our assessments. These are ranked low and if anything have been getting worse.
 
@@ -94,7 +109,7 @@ pirateye(d[ (tm) ],x_condition = "year",colour="ucl_all",dodgewidth = 0,
          line = T,dv="r",violin = F,error_bars = T,dots=F)+yp
 ```
 
-So in general terms: we had a relatively great pandemic! At least up until 2023 (the cohort that were in their first year during pandemic). But again the picture is complicated by the change in survey. We can split those responses by theme and compare against other depts. It's a bit messy comparing all individual themes for both, so let's try and simplify this by using a baseline. We can z score the r values for each question, each year. 
+So in general terms: we had a relatively great pandemic! At least up until 2023 (the cohort that were in their first year during pandemic). But again the picture is complicated by the change in survey. We can split those responses by theme and compare against other depts. It's a bit messy comparing all individual themes for both, so let's try and simplify this by using a baseline. We can z score the r values for each question, each year.
 
 ```{r}
 d[, rzall:=scale(r),by=.(year,question)]
@@ -102,9 +117,7 @@ pirateye( d[ucl & tm],x_condition = "year",colour_condition =  "theme",dodgewidt
          line = T,dv="rzall",violin = F,error_bars = F,dots=F)+yp+geom_hline(aes(yintercept=0))
 ```
 
-So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down
-
-Let's try an interactive plot of the same info - hoover on dots to see what individual questions are.
+So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down. Let's try an interactive plot of the same info
 
 ```{r}
 p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,colour=theme,text=q))+
@@ -113,4 +126,9 @@ p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,
   geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()
 ggplotly(p,tooltip = "text")
 ```
+
+Hover on dots to see what individual questions are and click/double click on the themes in the legend to hide/isolate them.
+
+# UCL versus competitors
+
 
