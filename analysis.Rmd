@@ -80,16 +80,20 @@ So it broadly looks as though agreement in these statement overall peaks around 
 
 # UCL results across the years
 
-Now let's plot UCL's last 10 years for each theme. There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years. 
+Now let's plot UCL's last 10 years for each theme. There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years. We're going to make a few of these interactive plots, so I will make a function for them
 
 ```{r warning=FALSE}
 d[,tm:=ifelse(theme %in% c("mental_health", "personal", "freedom","overall"),FALSE,TRUE)]
-yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))
-p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=r,colour=theme,text=paste(theme,q)))+yp+
-  geom_line(data=d[Institution=="University College London" & tm,.(r=mean(r)),by=.(year,theme)],
-            aes(x=year,colour=theme,y=r),inherit.aes = F,size=1.5,alpha=.4)+
-  geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()
+yearplotly <- function(data,y,colour_condition,title=NULL,cols=NULL){
+  p <- ggplot(data,aes(x=year,y=.data[[y]],colour=.data[[colour_condition]],text=paste(colour_condition,q)))+
+     geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))+
+    geom_line(stat='summary', fun='mean', aes(colour=.data[[colour_condition]],y=.data[[y]],x=year,text=.data[[colour_condition]]),
+              inherit.aes = F,size=1.5,alpha=.4)+
+  geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()+ggtitle(title)
+  if (!is.null(cols)){p <- p+ scale_color_manual(values=cols)}
 ggplotly(p,tooltip = "text")
+}
+yearplotly(data=d[Institution=="University College London" & tm],y = "r",colour_condition = "theme")
 ```
 
 This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions. Click/double click on the themes in the legend to hide or isolate them. 
@@ -103,10 +107,11 @@ So people love our resources! The rankings seem pretty stable over time here. Ra
 How do we match up with the average psych dept? Here's all rankings over the years, comparing UCL against all other psych depts.
 
 ```{r}
+yp <- geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))
 d[,ucl:=ifelse(Institution=="University College London",TRUE,FALSE)]
-d[,ucl_all:=ifelse(Institution=="University College London","UCL","All other")]
+d[,ucl_all:=ifelse(Institution=="University College London","UCL","Others")]
 pirateye(d[ (tm) ],x_condition = "year",colour="ucl_all",dodgewidth = 0,
-         line = T,dv="r",violin = F,error_bars = T,dots=F)+yp
+         line = T,dv="r",violin = F,error_bars = T,dots=F, cols=c("#00BD5C" , "#ff0000"))+yp
 ```
 
 So in general terms: we had a relatively great pandemic! At least up until 2023 (the cohort that were in their first year during pandemic). But again the picture is complicated by the change in survey. We can split those responses by theme and compare against other depts. It's a bit messy comparing all individual themes for both, so let's try and simplify this by using a baseline. We can z score the r values for each question, each year.
@@ -119,33 +124,52 @@ pirateye( d[ucl & tm],x_condition = "year",colour_condition =  "theme",dodgewidt
 
 So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down. Let's try an interactive plot of the same info
 
-```{r}
-p <- ggplot(d[Institution=="University College London" & tm],aes(x=year,y=rzall,colour=theme,text=paste(theme,q)))+
-  yp+geom_hline(aes(yintercept=0))+
-  geom_line(data=d[Institution=="University College London" & tm,.(rzall=mean(rzall)),by=.(year,theme)],aes(x=year,colour=theme,y=rzall),inherit.aes = F,size=1.5,alpha=.4)+
-  geom_point(position = position_jitter(width = 0.3, height = 0.1),alpha=.6,size=2)+theme_bw()
-ggplotly(p,tooltip = "text")
+```{r warning=FALSE}
+yearplotly(data=d[Institution=="University College London" & tm],y = "rzall",colour_condition = "theme")
 ```
 
 Hover on dots to see what individual questions are and click/double click on the themes in the legend to hide/isolate them.
 
 # UCL versus competitors
 
-Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have  Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, Oxford, St Andrews, Cambridge and Exeter. We can ID these in the data by UKPRN numbers, and just plot over all the questions:
+Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have  Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, Oxford, St Andrews, Cambridge and Exeter. We can ID these in the data by UKPRN numbers. Since places have changed their institutional names and punctuation over the past decade, we'll rename them with shorter names, and assign set colours to them that will repeat across plots. First let's see how all results stacked up over past decade
 
 ```{r}
-d[,ucl_comp:=ifelse(UKPRN %in% c(10005553, 10007167, 10007774, 10007775, 10007788, 
-               10007792, 10007794, 10007795, 10007803, 10007850,10007784),TRUE,FALSE)]
+namecode <- data.table(UKPRN=c("10005553", "10007167", "10007774", "10007775", "10007784", "10007788", "10007792", "10007794", "10007795", "10007803", "10007850"),uni=c("Royal Holloway", "York", "Oxford", "QMU", "UCL", "Cambridge", "Exeter", "Glasgow", "Leeds", "St Andrews", "Bath"),unicol=c( "#DB8E00", "#AEA200", "#64B200", "#00BD5C" , "#ff0000","#00C1A7" ,"#00BADE", "#00A6FF", "#B385FF", "#EF67EB" ,"#FF63B6"))
+d <- pid_merge(d,namecode,link = "UKPRN")
+d$ucl_comp <- ifelse(!is.na(d$uni),TRUE,FALSE)
+pirateye( d[ucl_comp & tm ],x_condition = "uni",
+         dv="rzall",violin = T,error_bars = T,dots=F,reorder = T, cols = namecode[,setNames(unicol,uni)],cflip = T)
+```
+
+Here is UCL against all these competitors over time. This is still z-scored against the whole country by year:
+ 
+```{r}
 pirateye( d[ucl_comp & tm],x_condition = "year",colour_condition =  "ucl_all",dodgewidth = 0,
-         line = T,dv="rzall",violin = F,error_bars = F,dots=F)+yp+geom_hline(aes(yintercept=0))
+         line = T,dv="rzall",violin = F,error_bars = F,dots=F, cols=c("#00BD5C" , "#ff0000"))+yp+geom_hline(aes(yintercept=0))
 ```
 
-So we were behind the pack a bit 10 years ago, then had a bit of growth from 2017 onwards. After the pandemic, like competitors, we have dipped (but again - a different survey is being used).
+So we were behind the pack a bit 10 years ago, then had a bit of growth from 2017 onwards. We did well during pandemic, as competitors did, though maybe not quite as well as us. But since then we all have dipped (but again - a different survey is being used).
 
-Now let's look at each of the themes in turn, and plot us vs all the competitors.
+Now let's look at each of the themes in turn, and plot us vs all the competitors. The full set of competitors is a bit too many for this plot, so we're going to narrow it down to smaller set of 7.  
 
-```{r}
-
+```{r warning=FALSE}
+d[,ucl_compsm:=ifelse(uni %in% c("Royal Holloway", "York", "QMU", "UCL",  "Glasgow", "Leeds", "Bath"),TRUE,FALSE)]
+themeplot <- "academic"
+yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
 ```
 
+```{r warning=FALSE}
+themeplot <- "assessment"
+yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
+```
+
+```{r warning=FALSE}
+themeplot <- "learnopp"
+yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
+```
+```{r warning=FALSE}
+themeplot <- "teaching"
+yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
+```
 
