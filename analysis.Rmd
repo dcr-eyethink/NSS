@@ -1,6 +1,11 @@
 ---
 title: "NSS results"
-output: github_document
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+output: html_document
 ---
 
 This is a notebook to analyse NNS data from 2014-2023, baswed on data from NSS wesbite. 
