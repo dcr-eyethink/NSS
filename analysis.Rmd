@@ -63,7 +63,7 @@ Now let's plot UCL's last 10 years for each theme There are vertical gray bars h
 ```{r}
 d[,tm:=ifelse(theme %in% c("mental_health", "personal", "freedom","overall"),FALSE,TRUE)]
 # this is a plot element with the new questionnaires marked. We can reuse it
-yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,size=3,aes(xintercept=year))
+yp <-  geom_vline(data=data.table(year=c(2016.5,2022.5)),alpha=0.1,linewidth=3,aes(xintercept=year))
 pirateye(d[Institution=="University College London" & tm],x_condition = "year",
          colour_condition = "theme",line = T,dv="r",violin = F,error_bars = F)+yp
  
