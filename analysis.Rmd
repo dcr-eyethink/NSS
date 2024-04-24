@@ -1,6 +1,6 @@
 ---
 title: "NSS results"
-output: html_notebook
+output: github_document
 ---
 
 This is a notebook to analyse NNS data from 2014-2023, baswed on data from NSS wesbite. 
@@ -24,7 +24,6 @@ First we need to translate the question numbers into the items and labels. There
 d <- rbind( pid_merge(full_data[year<=2016], qkey[,.(QuestionNumber=qnum,theme=theme2014,q=item2014,question=set_full2014)],link="QuestionNumber"),
  pid_merge(full_data[year>2016 & year<2023], qkey[,.(QuestionNumber=qnum,theme=theme2017,q=item2017, question=set_full2017)],link="QuestionNumber"),
  pid_merge(full_data[year==2023], qkey[,.(QuestionNumber=qnum,theme=theme2023,q=item2023, question=set_full2023)],link="QuestionNumber"))
-d
 
 ```
 Now we want one number that summarises responses to the question. Right now we have the distribution of responses for each. All the items are framed positively, ie if they agree with the statement the student is saying something good about the university. So we're going to code into a response variable between -1 and 1 that is positive if they are agreeing, and negative if they are disagreeing. This is different to how the NSS processes this. They have a positivity score, which I assume just calculates the % of responses that are agreeing in anyway. That seems to ignore some of the graded information we have in this dataset tbough.
@@ -56,6 +55,7 @@ I'm going to exclude the questions that aren't in the main list, and that are ab
 d <- d[!theme=="union" & !is.na(theme)]
 ggplot(d,aes(x=r,colour=year,group=year))+geom_density()
 ```
+
 So it broadly looks as though agreement in these statement overall peaks around the positive, "agree" response, but that over the years, responses have been slipping down for everyone.
 
 Now let's plot UCL's last 10 years for each theme There are vertical gray bars here to denote when questionnaire changed, making comparisons difficult. I am going to exclude the themes for mental_health, personal, overall satisfaction and freedom as they only have single question each that were only asked in a handful of years.
@@ -88,6 +88,7 @@ d[, rzall:=scale(r),by=.(year,question)]
 pirateye( d[ucl & tm],x_condition = "year",colour_condition =  "theme",dodgewidth = 0,
          line = T,dv="rzall",violin = F,error_bars = F,dots=F)+yp+geom_hline(aes(yintercept=0))
 ```
+
 So now the psychology sector average for each year is 0, shown by heavy black line. Benchmarked like this, it looks like we had a good period of growth from 2016 onwards, and in the pandemic years we were well above the mean in almost everything. But again, our assessments are ranked below the mean and perhaps trending down
 
 
