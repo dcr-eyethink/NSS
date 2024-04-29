@@ -18,7 +18,21 @@ knitr::opts_chunk$set(
 )
 ```
 
-This is a page analysing NSS data from 2014-2023, based on open source data from NSS wesbite. The code, data and markdown doc that generated this page are all on a github open repository <https://github.com/dcr-eyethink/NSS>. You can look over the processing that I did on data below, or you can skip to the plotting of [UCL results across the years] or [UCL vs all other psych depts], or [UCL versus competitors].
+This is a page analysing NSS data from 2014-2023, based on open source data from NSS wesbite. The code, data and markdown doc that generated this page are all on a github open repository <https://github.com/dcr-eyethink/NSS>.
+
+Here's how UCL psychology has placed in the past few years in the league tables for the complete university guide, the Guardian and the Times
+
+[![](docs/assets/league_year.png)](UCL psychology league tables)
+
+So there are two messages here. (a) We are pretty consistently in the second half of the top ten across the years, and (b) it looks like we've dipped the past couple years. So, we're going to dive into the archives of NSS data to figure out if these things are true and what we could do about them.
+
+Note: since making this page, I've found that UCL has a whole data analysis team that has compiled and benchmarked NSS and league tables. So in future drafts, I can use that data, which has the advantage of splitting by psych programmes within UCL.
+
+The headline result, that we'll underline below, is simply that we do very poorly on assessment and feedback. From UCL's analysis:
+
+![](docs/assets/theme23.png){width="600"}
+
+You can look over the processing that I did on data below, or you can skip to the plotting of [UCL results across the years] or [UCL vs all other psych depts], or [UCL versus competitors].
 
 ## Preprocessing
 
@@ -46,7 +60,7 @@ d <- rbind( pid_merge(full_data[year<=2016], qkey[,.(QuestionNumber=qnum,theme=t
 
 ```
 
-Now we want one number that summarises responses to the question. Right now we have the distribution of responses for each. All the items are framed positively, ie if they agree with the statement the student is saying something good about the university. So we're going to code into a response variable between -1 and 1 that is positive if they are agreeing, and negative if they are disagreeing. This is different to how the NSS processes this. They have a positivity score, which I assume just calculates the % of responses that are agreeing in anyway. That seems to ignore some of the graded information we have in this dataset tbough.
+Now we want one number that summarises responses to the question. Right now we have the distribution of responses for each. All the items are framed positively, ie if they agree with the statement the student is saying something good about the university. So we're going to code into a response variable between -1 and 1 that is positive if they are agreeing, and negative if they are disagreeing. This is different to how the NSS processes this. They have a positivity score, which I assume just calculates the % of responses that are agreeing in anyway. That seems to ignore some of the graded information we have in this dataset though.
 
 For pre 2023, each question has 5 columns giving % responses for the 5 options from strongly agree to strongly disagree. Convert these first to numbers, and then sum to a -1 to 1 scale in a variable r.
 
@@ -96,7 +110,7 @@ ggplotly(p,tooltip = "text")
 yearplotly(data=d[Institution=="University College London" & tm],y = "r",colour_condition = "theme")
 ```
 
-This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions. Click/double click on the themes in the legend to hide or isolate them. 
+This is an interactive plot, so you can hover over the dots to see the questions, or zoom into regions. Click/double click on the themes in the legend to hide or isolate them.
 
 If you want to see the full text of the questions, you can [look at the full question key](https://github.com/dcr-eyethink/NSS/blob/main/qkey3.csv)
 
@@ -132,7 +146,7 @@ Hover on dots to see what individual questions are and click/double click on the
 
 # UCL versus competitors
 
-Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have  Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, Oxford, St Andrews, Cambridge and Exeter. We can ID these in the data by UKPRN numbers. Since places have changed their institutional names and punctuation over the past decade, we'll rename them with shorter names, and assign set colours to them that will repeat across plots. First let's see how all results stacked up over past decade
+Let's focus on a smaller set of competitor departments. Reasonably arbitrarily we have Leeds, Glasgow, York, Royal Holloway, Queen Mary, Bath, St Andrews, and Exeter. Oxford and Cambridge are missing lots of NSS data due to a boycott over several years, so there is lots of variance in their results. We can ID these in the data by UKPRN numbers. Since places have changed their institutional names and punctuation over the past decade, we'll rename them with shorter names, and assign set colours to them that will repeat across plots. First let's see how all results stacked up over past decade
 
 ```{r}
 namecode <- data.table(UKPRN=c("10005553", "10007167", "10007774", "10007775", "10007784", "10007788", "10007792", "10007794", "10007795", "10007803", "10007850"),uni=c("Royal Holloway", "York", "Oxford", "QMU", "UCL", "Cambridge", "Exeter", "Glasgow", "Leeds", "St Andrews", "Bath"),unicol=c( "#DB8E00", "#AEA200", "#64B200", "#00BD5C" , "#ff0000","#00C1A7" ,"#00BADE", "#00A6FF", "#B385FF", "#EF67EB" ,"#FF63B6"))
@@ -143,7 +157,7 @@ pirateye( d[ucl_comp & tm ],x_condition = "uni",
 ```
 
 Here is UCL against all these competitors over time. This is still z-scored against the whole country by year:
- 
+
 ```{r}
 pirateye( d[ucl_comp & tm],x_condition = "year",colour_condition =  "ucl_all",dodgewidth = 0,
          line = T,dv="rzall",violin = F,error_bars = F,dots=F, cols=c("#00BD5C" , "#ff0000"))+yp+geom_hline(aes(yintercept=0))
@@ -151,7 +165,7 @@ pirateye( d[ucl_comp & tm],x_condition = "year",colour_condition =  "ucl_all",do
 
 So we were behind the pack a bit 10 years ago, then had a bit of growth from 2017 onwards. We did well during pandemic, as competitors did, though maybe not quite as well as us. But since then we all have dipped (but again - a different survey is being used).
 
-Now let's look at each of the themes in turn, and plot us vs all the competitors. The full set of competitors is a bit too many for this plot, so we're going to narrow it down to smaller set of 7.  
+Now let's look at each of the themes in turn, and plot us vs all the competitors. The full set of competitors is a bit too many for this plot, so we're going to narrow it down to smaller set of 7.
 
 ```{r warning=FALSE}
 d[,ucl_compsm:=ifelse(uni %in% c("Royal Holloway", "York", "QMU", "UCL",  "Glasgow", "Leeds", "Bath"),TRUE,FALSE)]
@@ -168,8 +182,8 @@ yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_conditi
 themeplot <- "learnopp"
 yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
 ```
+
 ```{r warning=FALSE}
 themeplot <- "teaching"
 yearplotly(data=d[ucl_compsm & tm & theme==themeplot],y = "rzall",colour_condition = "uni",title = themeplot,cols=namecode[,setNames(unicol,uni)])
 ```
-
