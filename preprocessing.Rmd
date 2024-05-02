@@ -1,0 +1,84 @@
+---
+title: "UCL Psychology NSS preprocessing"
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'preprocessing.html'))})
+output: html_document
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  out.width = "90%",
+  fig.width = 6, 
+  fig.height = 4,
+  comment = "#>"
+)
+```
+
+
+## Preprocessing
+
+If you don't have eyethinkdata tools, install from github
+
+```{r, eval=FALSE}
+devtools::install_github("dcr-eyethink/eyethinkdata")
+```
+
+Load library
+
+```{r}
+library(eyethinktools)
+```
+
+The data are currently in .csv files, one for each year, and one for UCL depts, and one with Russel Group competitors. Load in the files and make them into one data.frame with file name in the first column. 
+
+```{r}
+drg <- data_merger(datafolder = "tableau_data",ending = "RG.csv")
+ucl <-  data_merger(datafolder = "tableau_data",ending = "UCL.csv")
+drg[,year:=as.numeric(substr(filename,1,4))]
+ucl[,year:=as.numeric(substr(filename,1,4))]
+colnames(drg)[1:3] <- c("filename","qt", "resp")
+colnames(ucl)[1:3] <- c("filename","qt","resp")
+
+```
+
+Now we need to use some keys to identify the questions
+
+```{r}
+qk <- data.table(read.csv("qkey5.csv"))
+ucl <- pid_merge(ucl,qk[,.(qt=ucl_qt,question=ucl_question,item=ucl_item,theme=ucl_theme)],link="qt")
+drg <- pid_merge(drg,qk[,.(qt=drg_qt,question=drg_question,item=drg_item,theme=drg_theme)],link="qt")
+drg <- pid_merge(drg,drg[X.3=="UCL",.(year,question,theme,item,resp,UCLpsych=University.College.London..10007784.)],link = c("year","question","theme","item","resp"))
+drg <- drg[!X.3=="UCL"]
+```
+
+And now we can transpose and merge. Then we can give the institutions better names
+
+```{r warning=FALSE}
+d <- rbind(dcast(melt.data.table(drg,id.vars = c("year","question","item","theme","resp"),
+                measure.vars = 6:29,variable.name = "instit",value.name = "count"),
+      formula = year+instit+question+theme+item~resp,value.var = "count"),
+      dcast(melt.data.table(ucl,id.vars = c("year","question","item","theme","resp"),
+                measure.vars = c(6,7,8),variable.name = "instit",value.name = "count"),
+      formula = year+instit+question+theme+item~resp,value.var = "count"))
+inkey <- data.table(read.csv("instit.csv"))  
+d <-inkey[d,on="instit"]
+```
+
+There are two outcome variables we're going to use. The standard one NSS uses is positivity, pos, which is just the % of people agreeing with the statements. The other is one I made up called rate, which turns strongly disagree to strong agree into a number -1 to 1.
+
+```{r}
+d[,pos:= `% Agree`]
+d[,rate:=(`(1) Definitely Disagree Count`*-1+`(2) Mostly Disagree Count`*-.5+
+           `(4) Mostly Agree Count` *.5+`(5) Definitely Agree Count`)/ `Number of Respondents (headcount)`   ]
+```
+
+Later we will add in 2023 data. Let's save for now
+
+```{r}
+write.csv(d[,.(year,uni,set,theme,item,question,pos,rate)],file = "tableau_2017-22.csv")
+```
+
